@@ -1,0 +1,49 @@
+#!/bin/bash
+
+if [ "$#" -ne 2 ]; then
+    echo "Uso: $0 <nombre_carpeta> <ip_target>"
+    exit 1
+fi
+
+nombre_carpeta=$1
+ip_target=$2
+ruta_base="/¨DIRECTORIO A ESCOGER¨/$nombre_carpeta"
+
+mkdir -p "$ruta_base"/{nmap,content,exploits}
+
+sudo nmap -p- --open -sS --min-rate 5000 -vvv -n -Pn "$ip_target" -oG "$ruta_base"/nmap/allports
+
+# Ejecutar el comando whatweb y capturar el error si existe
+output=$(whatweb "$ip_target" 2>&1)
+
+# Verificar si hubo un error en la salida de whatweb
+if echo "$output" | grep -q "ERROR"; then
+    echo "Error de whatweb detectado. Intentando extraer el nombre del dominio..."
+
+    # Extraer el dominio del error
+    nombre_host=$(echo "$output" | grep -oP 'no address for \K[^ ]+')
+
+    if [ -z "$nombre_host" ]; then
+        echo "Error: No se pudo obtener el nombre del dominio desde el error."
+        exit 1
+    fi
+
+    echo "Dominio encontrado en el error: $nombre_host"
+fi
+
+# Limpiar caracteres especiales de la salida
+nombre_host=$(echo "$nombre_host" | sed 's/\x1b\[[0-9;]*m//g')
+echo "$ip_target $nombre_host" | sudo tee -a /etc/hosts 
+echo "Nombre del host agregado a /etc/hosts."
+
+# Ejecutar el script extractPorts para copiar los puertos del archivo allports
+echo "Ejecutando extractPorts para copiar puertos al portapapeles..."
+extractPorts "$ruta_base"/nmap/allports
+
+ports=$(xclip -o -selection clipboard) # Leer los puertos del portapapeles 
+echo "Puertos extraídos del portapapeles: $ports"
+
+echo "Ejecutando el segundo escaneo de nmap con los puertos..."
+sudo nmap -sCV -p"$ports" "$ip_target" -A -oN "$ruta_base"/nmap/target
+
+echo "Script finalizado."
