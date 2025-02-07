@@ -10,6 +10,8 @@ ip_target=$2
 ruta_base="/¨DIRECTORIO A ESCOGER¨/$nombre_carpeta"
 
 mkdir -p "$ruta_base"/{nmap,content,exploits}
+sudo chown ususario:grupo "$ruta_base"
+sudo chown ususario:grupo "$ruta_base"/{nmap,content,exploits}
 
 sudo nmap -p- --open -sS --min-rate 5000 -vvv -n -Pn "$ip_target" -oG "$ruta_base"/nmap/allports
 
