@@ -1,9 +1,10 @@
 #!/bin/bash
 
 function help(){
-    echo "Uso: $0 [-d <nombre_carpeta>] <ip_target>"
+    echo "Uso: $0 [-d <nombre_carpeta>] [-w wordlist] <ip_target>"
     echo "Opciones:"
     echo "  -d <nombre_carpeta>  Nombre de la carpeta donde se guardarán los resultados."
+    echo "  -w <wordlist> Wordlist que se usara para el descubrimiento de subdominios y directorios (Si no desea hacer el descubrimiento omitala)"
 }
 
 CURRENTUSER=$USER 
@@ -13,11 +14,15 @@ fi
 GROUP=$(id -gn $CURRENTUSER)
 PHT=$(pwd)
 nombre_carpeta=""
+wordlist=""
 
-while getopts ":d:h" opt; do
+while getopts ":d:w:h" opt; do
   case $opt in
     d)
       nombre_carpeta="$OPTARG";;
+    w)
+      wordlist="$OPTARG"
+      echo "Wordlist asignada: $wordlist";;
     h)
       help
       exit 1
@@ -26,8 +31,8 @@ while getopts ":d:h" opt; do
 done
 
 shift $((OPTIND - 1))
-
 ip_target=$1
+
 if [ "$nombre_carpeta" == "" ]; then
     nombre_carpeta=$ip_target
 fi
@@ -47,6 +52,7 @@ sudo chown $CURRENTUSER:$GROUP "$ruta_base"/{nmap,content,exploits}
 
 sudo nmap -p- --open -sS --min-rate 5000 -vvv -n -Pn "$ip_target" -oG "$ruta_base"/nmap/allports
 sudo chown $CURRENTUSER:$GROUP "$ruta_base"/nmap/allports
+
 # Ejecutar el comando whatweb y capturar el error si existe
 output=$(whatweb "$ip_target" 2>&1)
 
@@ -65,7 +71,6 @@ if echo "$output" | grep -q "ERROR"; then
     echo "Dominio encontrado en el error: $nombre_host"
 fi
 
-
 # Limpiar caracteres especiales de la salida
 nombre_host=$(echo "$nombre_host" | sed 's/\x1b\[[0-9;]*m//g')
 echo "$ip_target $nombre_host" | sudo tee -a /etc/hosts 
@@ -80,5 +85,13 @@ echo "Puertos extraídos del portapapeles: $ports"
 
 echo "Ejecutando el segundo escaneo de nmap con los puertos..."
 sudo nmap -sCV -p"$ports" "$ip_target" -A -oN "$ruta_base"/nmap/target
+
+# Descubrimiento de subdominios y directorios
+if [[ "$wordlist" != "" ]]; then
+  echo "Descubriendo directorios"
+  gobuster dir -u "$nombre_host" -w "$wordlist" --no-error -t 200
+  echo "Descubriendo subdominios"
+  gobuster vhost -u http://"$nombre_host" -w "$wordlist" -t 200 --append-domain --no-error -r
+fi
 
 echo "Script finalizado."
