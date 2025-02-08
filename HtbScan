@@ -12,6 +12,7 @@ if [ "$CURRENTUSER" == "root" ]; then
 fi
 GROUP=$(id -gn $CURRENTUSER)
 PHT=$(pwd)
+nombre_carpeta=""
 
 while getopts ":d:h" opt; do
   case $opt in
@@ -35,7 +36,7 @@ ruta_base="$PHT/$nombre_carpeta"
 
 echo $ruta_base
 
-if [ $# -le 1 ]; then
+if [ $# -lt 1 ]; then
     help
     exit 1
 fi
@@ -45,7 +46,7 @@ sudo chown $CURRENTUSER:$GROUP "$ruta_base"
 sudo chown $CURRENTUSER:$GROUP "$ruta_base"/{nmap,content,exploits}
 
 sudo nmap -p- --open -sS --min-rate 5000 -vvv -n -Pn "$ip_target" -oG "$ruta_base"/nmap/allports
-
+sudo chown $CURRENTUSER:$GROUP "$ruta_base"/nmap/allports
 # Ejecutar el comando whatweb y capturar el error si existe
 output=$(whatweb "$ip_target" 2>&1)
 
@@ -63,6 +64,7 @@ if echo "$output" | grep -q "ERROR"; then
 
     echo "Dominio encontrado en el error: $nombre_host"
 fi
+
 
 # Limpiar caracteres especiales de la salida
 nombre_host=$(echo "$nombre_host" | sed 's/\x1b\[[0-9;]*m//g')
