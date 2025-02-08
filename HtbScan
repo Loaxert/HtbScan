@@ -1,17 +1,48 @@
 #!/bin/bash
 
-if [ "$#" -ne 2 ]; then
-    echo "Uso: $0 <nombre_carpeta> <ip_target>"
+function help(){
+    echo "Uso: $0 [-d <nombre_carpeta>] <ip_target>"
+    echo "Opciones:"
+    echo "  -d <nombre_carpeta>  Nombre de la carpeta donde se guardarán los resultados."
+}
+
+CURRENTUSER=$USER 
+if [ "$CURRENTUSER" == "root" ]; then
+    CURRENTUSER=$SUDO_USER
+fi
+GROUP=$(id -gn $CURRENTUSER)
+PHT=$(pwd)
+
+while getopts ":d:h" opt; do
+  case $opt in
+    d)
+      nombre_carpeta="$OPTARG";;
+    h)
+      help
+      exit 1
+      ;;
+  esac
+done
+
+shift $((OPTIND - 1))
+
+ip_target=$1
+if [ "$nombre_carpeta" == "" ]; then
+    nombre_carpeta=$ip_target
+fi
+
+ruta_base="$PHT/$nombre_carpeta"
+
+echo $ruta_base
+
+if [ $# -le 1 ]; then
+    help
     exit 1
 fi
 
-nombre_carpeta=$1
-ip_target=$2
-ruta_base="/¨DIRECTORIO A ESCOGER¨/$nombre_carpeta"
-
 mkdir -p "$ruta_base"/{nmap,content,exploits}
-sudo chown ususario:grupo "$ruta_base"
-sudo chown ususario:grupo "$ruta_base"/{nmap,content,exploits}
+sudo chown $CURRENTUSER:$GROUP "$ruta_base"
+sudo chown $CURRENTUSER:$GROUP "$ruta_base"/{nmap,content,exploits}
 
 sudo nmap -p- --open -sS --min-rate 5000 -vvv -n -Pn "$ip_target" -oG "$ruta_base"/nmap/allports
 
