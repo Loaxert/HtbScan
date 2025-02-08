@@ -1,7 +1,7 @@
 # HtbScan
-Script que automatiza el scaneo inicial de puertos de hack the box
+Script que automatiza el scaneo inicial de puertos, subdominios y subdirectorios de hack the box 
 
-https://github.com/user-attachments/assets/4b82fba2-2f94-4c80-a595-ee48fe223414
+https://github.com/user-attachments/assets/ad01e916-5e04-499d-a021-861502c69759
 
 Si ocurren problemas con el interprete relacionado al shebang se puede corregir mediante
 
